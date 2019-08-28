@@ -1,5 +1,10 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:formvalidation/src/models/producto_model.dart';
+import 'package:formvalidation/src/providers/productos_provider.dart';
 import 'package:formvalidation/src/utils/utils.dart' as utils;
+import 'package:image_picker/image_picker.dart';
 
 class ProductoPage extends StatefulWidget {
   
@@ -8,21 +13,37 @@ class ProductoPage extends StatefulWidget {
 }
 
 class _ProductoPageState extends State<ProductoPage> {
-  final formKey = GlobalKey<FormState>(  );
+
+  final formKey = GlobalKey<FormState>();
+  final scaffoldKey = GlobalKey<ScaffoldState>();
+  final productoProvider = ProductosProvider();
+
+  ProductoModel producto = new ProductoModel();
+  bool _guardando = false;
+
+  File foto;
 
   @override
   Widget build(BuildContext context) {
+
+    final ProductoModel prodData = ModalRoute.of(context).settings.arguments;//pasamos parametros o argumentos
+
+    if (prodData != null) {
+      producto = prodData;
+    }
+
     return Scaffold(
+      key: scaffoldKey,
       appBar: AppBar(
         title: Text('Producto'),
         actions: <Widget>[
           IconButton(
             icon: Icon(Icons.photo_size_select_actual),
-            onPressed: (){},
+            onPressed: _seleccionarFoto,
           ),
           IconButton(
             icon: Icon(Icons.camera_alt),
-            onPressed: (){},
+            onPressed: _tomarFoto,
           )
         ],
       ),
@@ -33,8 +54,10 @@ class _ProductoPageState extends State<ProductoPage> {
             key: formKey,
             child: Column(
               children: <Widget>[
+                _mostrarFoto(),
                 _crearNombre(),
                 _crearPrecio(),
+                _crearDisponible(),
                 _crearBoton(),
               ],
             ),
@@ -46,10 +69,12 @@ class _ProductoPageState extends State<ProductoPage> {
 
   Widget _crearNombre(){
     return TextFormField(
+      initialValue: producto.titulo,
       textCapitalization: TextCapitalization.sentences,
       decoration: InputDecoration(
         labelText: 'Producto'
       ),
+      onSaved: (value) => producto.titulo = value,//recuperamos el valor que estamos ingresando 
       validator: (value){
         if (value.length < 3) {
           return 'Ingrese el nombre del producto';
@@ -62,10 +87,12 @@ class _ProductoPageState extends State<ProductoPage> {
 
   Widget _crearPrecio(){
     return TextFormField(
+      initialValue: producto.valor.toString(),
       keyboardType: TextInputType.numberWithOptions(decimal: true),
       decoration: InputDecoration(
         labelText: 'Precio'
       ),
+      onSaved: (value) => producto.valor = double.parse(value),
       validator: (value){
         if (utils.isNumeric(value) ) {
           return null;
@@ -85,11 +112,96 @@ class _ProductoPageState extends State<ProductoPage> {
       textColor: Colors.white,
       label: Text('Guardar'),
       icon: Icon(Icons.save),
-      onPressed: () => _submit(),
+      onPressed: (_guardando) ? null : _submit,
     );
   }
 
-  void _submit(){
+  Widget _crearDisponible(){
+    return SwitchListTile(
+      value: producto.disponible,
+      title: Text('Disponible'),
+      activeColor: Colors.deepPurple,
+      onChanged: (value) => setState( () {
+        producto.disponible = value;
+      }),
+    );
+  }
+
+  void _submit() async{
+
+
+
     if (!formKey.currentState.validate()) return;
+
+    formKey.currentState.save();//luego de validar el formulario guardamos los valores actuales del form y os conservamos 
+
+    
+    setState(() {_guardando = true;});
+
+    if (foto != null) {
+      producto.fotoUrl = await productoProvider.subirImagen(foto);
+    }
+
+    if (producto.id == null) {
+      productoProvider.crearProducto(producto);
+    }else{
+      productoProvider.editarProducto(producto);
+    }
+    
+    //setState(() {_guardando = false;});
+    mostrarSnackbar('Registro guardado');
+
+    Navigator.pop(context);
+    
+  }
+
+  void mostrarSnackbar(String mensaje){
+    final snackbar = SnackBar(
+      content: Text(mensaje),
+      duration: Duration(milliseconds: 1500),
+    );
+
+    scaffoldKey.currentState.showSnackBar(snackbar);
+  }
+
+
+  _mostrarFoto(){
+    if (producto.fotoUrl != null) {
+      
+      return FadeInImage(
+        image: NetworkImage(producto.fotoUrl),
+        placeholder: AssetImage('assets/jar-loading.gif'),
+        height: 300.0,
+        fit: BoxFit.contain,
+      );    
+    }else{
+      return Image(
+        image: AssetImage( foto?.path ?? 'assets/no-image.png'),
+        height: 300.0,
+        fit: BoxFit.cover,
+      );
+    }
+  }
+
+  _seleccionarFoto() async{
+    _procesarImagen(ImageSource.gallery);
+  }
+
+  _tomarFoto() async{
+    _procesarImagen(ImageSource.camera);
+  }
+
+  _procesarImagen( ImageSource origen ) async{
+    foto = await ImagePicker.pickImage(
+      source: origen,
+    );
+
+    if(foto != null){
+      producto.fotoUrl = null;
+    }
+
+    setState(() {
+      
+    });
   }
 }
