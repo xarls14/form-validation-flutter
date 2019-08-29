@@ -3,9 +3,10 @@ import 'package:formvalidation/src/bloc/provider.dart';
 import 'package:formvalidation/src/providers/usuario_provider.dart';
 import 'package:formvalidation/src/utils/utils.dart';
 
-class LoginPage extends StatelessWidget {
-  
+class RegistroPage extends StatelessWidget {
+
   final usuarioProvider = new UsuarioProvider();
+  
 
   @override
   Widget build(BuildContext context) {
@@ -48,7 +49,7 @@ class LoginPage extends StatelessWidget {
             ),
             child: Column(
               children: <Widget>[
-                Text('Ingreso', style: TextStyle(fontSize: 20.0),),
+                Text('Crear cuenta', style: TextStyle(fontSize: 20.0),),
                 SizedBox(height: 60.0,),
                 _crearEmail(bloc),
                 SizedBox(height: 30.0,),
@@ -60,8 +61,8 @@ class LoginPage extends StatelessWidget {
           ),
 
           FlatButton(
-            child: Text('Crear una nueva cuenta'),
-            onPressed: () => Navigator.pushReplacementNamed(context, 'registro'),
+            child: Text('¿Ya tienes cuenta? Login'),
+            onPressed: () => Navigator.pushReplacementNamed(context, 'login'),
           ),
           SizedBox(height: 100.0,),
         ],
@@ -138,17 +139,15 @@ class LoginPage extends StatelessWidget {
           elevation: 0.0,
           color: Colors.deepPurple,
           textColor: Colors.white,
-          onPressed: snapshot.hasData ? () => _login(bloc, context) : null,
+          onPressed: snapshot.hasData ? () => _register(bloc, context) : null,
         );
       },
     );
   }
 
-  _login(LoginBloc bloc, BuildContext context) async {
+  _register(LoginBloc bloc, BuildContext context) async {
 
-    Map info = await usuarioProvider.login(bloc.email, bloc.password);
-    //print('email: ${bloc.email}');
-    //print('password: ${bloc.password}');
+    final info = await usuarioProvider.nuevoUsuario(bloc.email, bloc.password);
 
     if (info['ok']) {
       Navigator.pushReplacementNamed(context, 'home');
@@ -156,7 +155,7 @@ class LoginPage extends StatelessWidget {
       mostrarAlerta(context, info['mensaje']);
     }
 
-    
+    //Navigator.pushReplacementNamed(context, 'home');
 
   }
 
